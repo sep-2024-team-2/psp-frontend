@@ -4,50 +4,36 @@ import "./PaymentOptions.css";
 const PaymentOptions = () => {
   const [paymentOptions, setPaymentOptions] = useState([]);
   const [error, setError] = useState(null);
-  const [port, setPort] = useState(null);
   const [totalPrice, setTotalPrice] = useState(null);
   const [webshopId, setWebshopId] = useState(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
-    const portValue = queryParams.get("port");
+    const webshopIdValue = queryParams.get("port");
     const totalPriceValue = queryParams.get("totalPrice");
 
-    setPort(portValue);
+    console.log("hejj");
+    setWebshopId(webshopIdValue);
     setTotalPrice(totalPriceValue);
 
-    if (portValue && totalPriceValue) {
-      fetchWebshopId(portValue);
-      fetchPaymentOptions(portValue, totalPriceValue);
+    if (webshopIdValue) {
+      fetchPaymentOptions(webshopIdValue);
     }
   }, []);
 
-  const fetchWebshopId = async (port) => {
+  const fetchPaymentOptions = async (webshopId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/webshop?port=${port}`
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch webshop ID");
-      }
-      const data = await response.json();
-      setWebshopId(data.webshopId);
-    } catch (error) {
-      console.error("Error fetching webshop ID:", error);
-      setError(error.message);
-    }
-  };
-
-  const fetchPaymentOptions = async (port, totalPrice) => {
-    try {
-      const response = await fetch(
-        "http://localhost:8080/api/psp/payment-options",
+        `http://localhost:8080/api/psp/payment-options`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ totalPrice, port }),
+          body: JSON.stringify({
+            webshopId,
+            totalPrice,
+          }),
         }
       );
 
@@ -56,19 +42,30 @@ const PaymentOptions = () => {
       }
 
       const data = await response.json();
-      if (data.paymentOptions) {
-        setPaymentOptions(data.paymentOptions);
+      console.log("Fetched payment methods:", data.paymentMethods);
+
+      if (data.paymentMethods) {
+        setPaymentOptions(data.paymentMethods);
       } else {
         setPaymentOptions([]);
       }
     } catch (error) {
+      console.error("Error fetching payment options:", error);
       setError(error.message);
+    }
+  };
+
+  const handlePaymentOptionClick = async (option) => {
+    if (option.toLowerCase() === "card") {
+      await handleCardSubmit();
+    } else {
+      setError("This payment option is not implemented yet.");
     }
   };
 
   const handleCardSubmit = async () => {
     if (!webshopId) {
-      setError("Webshop ID not available");
+      setError("Webshop ID is not available");
       return;
     }
 
@@ -92,8 +89,7 @@ const PaymentOptions = () => {
     };
 
     try {
-      // Ovde ubaci svoj url gde ti treba da se posalju ove vrednosti LukaUslj
-      const response = await fetch("https://example.com/api/process-payment", {
+      const response = await fetch("Lukin url", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -102,26 +98,19 @@ const PaymentOptions = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to process payment on example.com");
+        throw new Error("Payment processing failed");
       }
 
       const data = await response.json();
       console.log("Payment processed successfully:", data);
 
+      // Redirect to URL ako je ok
       window.location.href = redirectUrls.successUrl;
     } catch (error) {
       console.error("Error processing payment:", error);
 
       window.location.href = redirectUrls.errorUrl;
       setError(error.message);
-    }
-  };
-
-  const handlePaymentOptionClick = async (option) => {
-    if (option.toLowerCase() === "card") {
-      await handleCardSubmit();
-    } else {
-      setError("This payment option is not implemented");
     }
   };
 
@@ -141,6 +130,10 @@ const PaymentOptions = () => {
                 cursor: "pointer",
                 color: "white",
                 fontSize: 25,
+                padding: "10px",
+                background: "#007bff",
+                margin: "10px 0",
+                borderRadius: "5px",
               }}
               onClick={() => handlePaymentOptionClick(option)}
             >
